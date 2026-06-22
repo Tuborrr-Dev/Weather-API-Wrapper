@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Weather API</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      background: #0f0f0f;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      letter-spacing: -0.5px;
+    }
+
+    p.sub {
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+
+    .search {
+      display: flex;
+      gap: 0.5rem;
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 2rem;
+    }
+
+    input {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      border: 1px solid #2a2a2a;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    input:focus { border-color: #555; }
+
+    button {
+      padding: 0.75rem 1.25rem;
+      border-radius: 10px;
+      border: none;
+      background: #fff;
+      color: #000;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    button:hover { opacity: 0.85; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 480px;
+      display: none;
+    }
+
+    .card.visible { display: block; }
+
+    .city-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+    }
+
+    .city-name { font-size: 1.6rem; font-weight: 700; }
+    .climate { color: #888; font-size: 0.85rem; margin-top: 0.2rem; text-transform: capitalize; }
+
+    .temp {
+      font-size: 3rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .feels { color: #666; font-size: 0.8rem; margin-top: 0.25rem; text-align: right; }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #2a2a2a;
+      margin: 1.5rem 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .stat { }
+    .stat-label { font-size: 0.75rem; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-value { font-size: 1rem; font-weight: 600; margin-top: 0.2rem; }
+
+    .error {
+      color: #ff5555;
+      font-size: 0.9rem;
+      text-align: center;
+      display: none;
+    }
+
+    .error.visible { display: block; }
+
+    .loader {
+      width: 18px; height: 18px;
+      border: 2px solid #333;
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none;
+      margin: 0 auto;
+    }
+
+    .loader.visible { display: block; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <h1>🌤 Weather</h1>
+  <p class="sub">Powered by Tuborrr-Dev Wrapper API (OpenWeather API)</p>
+
+  <div class="search">
+    <input id="cityInput" type="text" placeholder="Enter a city..." />
+    <button id="searchBtn" onclick="fetchWeather()">Search</button>
+  </div>
+
+  <div class="loader" id="loader"></div>
+  <p class="error" id="error"></p>
+
+  <div class="card" id="card">
+    <div class="city-row">
+      <div>
+        <div class="city-name" id="cityName"></div>
+        <div class="climate" id="climate"></div>
+      </div>
+      <div>
+        <div class="temp" id="temp"></div>
+        <div class="feels" id="feels"></div>
+      </div>
+    </div>
+    <hr class="divider"/>
+    <div class="grid">
+      <div class="stat">
+        <div class="stat-label">Humidity</div>
+        <div class="stat-value" id="humidity"></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Wind Speed</div>
+        <div class="stat-value" id="wind"></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Pressure</div>
+        <div class="stat-value" id="pressure"></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Visibility</div>
+        <div class="stat-value" id="visibility"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = 'https://weather-api-wrapper-production.up.railway.app';
+
+    document.getElementById('cityInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') fetchWeather();
+    });
+
+    async function fetchWeather() {
+      const city = document.getElementById('cityInput').value.trim();
+      if (!city) return;
+
+      const btn = document.getElementById('searchBtn');
+      const loader = document.getElementById('loader');
+      const card = document.getElementById('card');
+      const error = document.getElementById('error');
+
+      btn.disabled = true;
+      loader.classList.add('visible');
+      card.classList.remove('visible');
+      error.classList.remove('visible');
+
+      try {
+        const res = await fetch(`${API}/weather/${encodeURIComponent(city)}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.detail || 'Something went wrong');
+        }
+
+        document.getElementById('cityName').textContent = data.City;
+        document.getElementById('climate').textContent = data.Climate_Description;
+        document.getElementById('temp').textContent = `${Math.round(data.Temperature_in_Farheinheit)}°F`;
+        document.getElementById('feels').textContent = `Feels like ${Math.round(data.Temperature_would_feel_like)}°F`;
+        document.getElementById('humidity').textContent = `${data.humidity}%`;
+        document.getElementById('wind').textContent = `${data.wind_speed} mph`;
+        document.getElementById('pressure').textContent = `${data.pressure} hPa`;
+        document.getElementById('visibility').textContent = `${(data.visibility / 1000).toFixed(1)} km`;
+
+        card.classList.add('visible');
+      } catch (err) {
+        error.textContent = err.message;
+        error.classList.add('visible');
+      } finally {
+        btn.disabled = false;
+        loader.classList.remove('visible');
+      }
+    }
+  </script>
+</body>
+</html>
