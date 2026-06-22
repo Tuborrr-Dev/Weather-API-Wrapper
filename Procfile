@@ -1,0 +1,1 @@
+web: uvicorn api_wrapper:api_wrapper --host 0.0.0.0 --port $PORT
