@@ -8,6 +8,15 @@ from datetime import datetime, timedelta
 
 cache = {}
 api_wrapper = FastAPI()
+
+from fastapi.middleware.cors import CORSMiddleware
+
+api_wrapper.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # this is so railway allows github pages to request
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 load_dotenv()
 api_key = os.getenv("api_key")
 """https://api.openweathermap.org/data/4.0/onecall/current?lat={lat}&lon={lon}&appid={API key}"""
@@ -61,7 +70,7 @@ def get_city(city: str):
             geo_response = present_session.get(
                 geo_url, params=geo_payload, timeout=10
             )  # <-- this is just the lat and lon cry ehn
-            if geo_response is None:
+            if not geo_response:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="City not found.",
@@ -105,4 +114,4 @@ def get_city(city: str):
     except requests.exceptions.Timeout:
         raise HTTPException(status_code=408, detail="Request timed out")
     except requests.exceptions.RequestException as issue:
-        raise Exception(f"Error from OpenWeather: ", issue)
+        raise HTTPException(status_code=500, detail=str(issue))
