@@ -112,6 +112,6 @@ def get_city(city: str):
             detail=f"OpenWeather API returned an error (Status {e}).",
         )
     except requests.exceptions.Timeout:
-        raise HTTPException(status_code=408, detail="Request timed out")
+        raise HTTPException(status.HTTP_408_REQUEST_TIMEOUT, detail="Request timed out")
     except requests.exceptions.RequestException as issue:
-        raise HTTPException(status_code=500, detail=str(issue))
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(issue))
